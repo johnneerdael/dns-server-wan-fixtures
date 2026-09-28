@@ -51,6 +51,10 @@ class WanFixtures(unittest.TestCase):
         self.assertTrue(proxy.permitted("203.0.113.4", nets))
         self.assertFalse(proxy.permitted("198.51.100.4", nets))
         self.assertEqual(proxy.short_response(fault, 5)[3] & 15, 5)
+        with_opt = fault[:10] + b"\0\1" + fault[12:] + b"\0" + struct.pack("!HHIH", 41, 1232, 0, 0)
+        truncated = proxy.short_response(with_opt, 0, truncated=True)
+        self.assertEqual(struct.unpack_from("!H", truncated, 10)[0], 1)
+        self.assertEqual(struct.unpack_from("!H", truncated, len(truncated) - 10)[0], 41)
 
     def test_split_prefix_has_identical_payload(self):
         left, right = socket.socketpair()

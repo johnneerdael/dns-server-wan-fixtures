@@ -117,7 +117,14 @@ def short_response(query: bytes, rcode: int, truncated: bool = False) -> bytes:
     _, end = question(query)
     ident, flags = struct.unpack_from("!HH", query)
     response_flags = 0x8400 | (flags & 0x0110) | (0x0200 if truncated else 0) | rcode
-    return struct.pack("!HHHHHH", ident, response_flags, 1, 0, 0, 0) + query[12:end]
+    opt = b""
+    if struct.unpack_from("!H", query, 10)[0] == 1 and len(query) >= end + 11:
+        if query[end] == 0 and struct.unpack_from("!H", query, end + 1)[0] == 41:
+            length = struct.unpack_from("!H", query, end + 9)[0]
+            if end + 11 + length == len(query):
+                payload = struct.unpack_from("!H", query, end + 3)[0]
+                opt = b"\0" + struct.pack("!HHIH", 41, max(512, min(payload, 1232)), 0, 0)
+    return struct.pack("!HHHHHH", ident, response_flags, 1, 0, 0, int(bool(opt))) + query[12:end] + opt
 
 
 def forward_tcp(cfg: dict, query: bytes) -> bytes:
