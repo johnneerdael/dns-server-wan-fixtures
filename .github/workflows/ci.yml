@@ -1,0 +1,34 @@
+name: Build and test WAN fixtures
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source and Compose
+        run: |
+          cp .env.example .env
+          python3 -m unittest discover -s tests -v
+          docker compose config --quiet
+      - name: Build both containers
+        run: docker compose build
+      - name: Start an isolated local stack
+        env:
+          WAN_BIND_IPV4: 127.0.0.1
+          WAN_DNS_PORT: '5303'
+          WAN_ALLOWED_FAULT_CLIENTS: 172.16.0.0/12,192.168.0.0/16
+        run: docker compose up -d --wait
+      - name: Verify DNS wire sizes and truncation
+        env:
+          WAN_TEST_PORT: '5303'
+        run: python3 -m unittest discover -s tests -v
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 100
+      - name: Stop local stack
+        if: always()
+        run: docker compose down -v

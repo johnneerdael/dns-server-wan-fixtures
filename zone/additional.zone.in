@@ -1,0 +1,10 @@
+; ADDITIVE import into quality-assurance.fyi. Keep every record DNS only.
+; Optional additional inclusion remains under provider/resolver control.
+additional-mx.dns.quality-assurance.fyi. 300 IN MX 10 additional-mail.dns.quality-assurance.fyi.
+*.additional-mx.dns.quality-assurance.fyi. 300 IN MX 10 additional-mail.dns.quality-assurance.fyi.
+additional-mail.dns.quality-assurance.fyi. 300 IN A 192.0.2.25
+additional-mail.dns.quality-assurance.fyi. 300 IN AAAA 2001:db8::25
+additional-srv.dns.quality-assurance.fyi. 300 IN SRV 10 60 8443 additional-service.dns.quality-assurance.fyi.
+*.additional-srv.dns.quality-assurance.fyi. 300 IN SRV 10 60 8443 additional-service.dns.quality-assurance.fyi.
+additional-service.dns.quality-assurance.fyi. 300 IN A 192.0.2.40
+additional-service.dns.quality-assurance.fyi. 300 IN AAAA 2001:db8::40

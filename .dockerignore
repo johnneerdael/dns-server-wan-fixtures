@@ -1,0 +1,6 @@
+.git
+.env
+tests
+README.md
+__pycache__
+*.pyc

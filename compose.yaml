@@ -1,0 +1,72 @@
+name: dns-wan-fixtures
+
+services:
+  authoritative:
+    build:
+      context: .
+      dockerfile: zone/Dockerfile
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 512m
+    environment:
+      WAN_DOMAIN: "${WAN_DOMAIN:?Set WAN_DOMAIN in .env}"
+      WAN_NS1: "${WAN_NS1:?Set WAN_NS1 in .env}"
+      WAN_NS2: "${WAN_NS2:?Set WAN_NS2 in .env}"
+      WAN_PUBLIC_IPV4_1: "${WAN_PUBLIC_IPV4_1:?Set WAN_PUBLIC_IPV4_1 in .env}"
+      WAN_PUBLIC_IPV4_2: "${WAN_PUBLIC_IPV4_2:?Set WAN_PUBLIC_IPV4_2 in .env}"
+      WAN_ZONE_SERIAL: "${WAN_ZONE_SERIAL:-2026092801}"
+    volumes:
+      - bind-cache:/var/cache/bind
+    expose: ["5353/udp", "5353/tcp"]
+    healthcheck:
+      test: [CMD-SHELL, "dig @127.0.0.1 -p 5353 a.$${WAN_DOMAIN} A +short | grep -q 192.0.2.10"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  dns:
+    build:
+      context: .
+      dockerfile: proxy/Dockerfile
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    environment:
+      WAN_DOMAIN: "${WAN_DOMAIN:?Set WAN_DOMAIN in .env}"
+      WAN_ALLOWED_FAULT_CLIENTS: "${WAN_ALLOWED_FAULT_CLIENTS:-127.0.0.1/32,::1/128}"
+      WAN_FAULT_CHUNK_DELAY_MS: "${WAN_FAULT_CHUNK_DELAY_MS:-50}"
+      WAN_FAULT_STALL_SECONDS: "${WAN_FAULT_STALL_SECONDS:-2}"
+      UPSTREAM_HOST: authoritative
+      UPSTREAM_PORT: "5353"
+      LISTEN_HOST: 0.0.0.0
+      LISTEN_PORT: "5301"
+    ports:
+      - target: 5301
+        published: "${WAN_DNS_PORT:-53}"
+        host_ip: "${WAN_BIND_IPV4:-0.0.0.0}"
+        protocol: udp
+      - target: 5301
+        published: "${WAN_DNS_PORT:-53}"
+        host_ip: "${WAN_BIND_IPV4:-0.0.0.0}"
+        protocol: tcp
+    depends_on:
+      authoritative:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python3, /app/proxy.py, --healthcheck]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  bind-cache:

@@ -1,0 +1,22 @@
+options {
+    directory "/var/cache/bind";
+    listen-on port 5353 { any; };
+    listen-on-v6 port 5353 { any; };
+    recursion no;
+    dnssec-validation no;
+    allow-query { any; };
+    allow-transfer { none; };
+    allow-update { none; };
+    notify no;
+    minimal-responses no;
+    max-records-per-type 256;
+    pid-file "/var/cache/bind/named.pid";
+    session-keyfile "/var/cache/bind/session.key";
+};
+zone "@WAN_DOMAIN@" {
+    type primary;
+    file "/var/cache/bind/zone.db";
+    inline-signing yes;
+    dnssec-policy default;
+    key-directory "/var/cache/bind/keys";
+};
